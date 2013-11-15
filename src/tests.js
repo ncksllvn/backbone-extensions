@@ -13,8 +13,8 @@ server.respondWith('GET', '/collection', function(xhr){
 
 server.autoRespond = true;
 
-module('Test the cacheable collection.');
-asyncTest('Make sure there is network activity on the first call to fetch.', function(){
+module('Test the Backbone.Cacheables');
+asyncTest('Make sure there is network activity on the first call to fetch, then on the second call to fetch seamlessly return the collection.', function(){
     expect(12)
     var collection = new (Backbone.Cacheable.Collection.extend({ url: '/collection' }))()
     var response, options;
@@ -55,7 +55,70 @@ asyncTest('Make sure there is network activity on the first call to fetch.', fun
                 .done(start)
             
         })
-    
-    
-    
 });
+
+module('Test the 404 Handler on the History')
+asyncTest('Make sure routers fire off a 404 event', function(){
+    
+    expect(5)
+    
+    Backbone.history = new Backbone.HistoryWith404();
+    
+    var router = new Backbone.RouterWith404({
+        routes: {
+            ''       : 'route0',
+            'route1' : 'route1',
+            'route2' : 'route2'
+        }
+    });
+    
+    
+    var callback = sinon.spy();
+    
+    router.on('route:route0', callback);
+    router.on('route:route1', callback);
+    router.on('route:route2', callback);
+    router.on('statusCode:404', callback);
+    
+    document.location.hash=''
+    Backbone.history.start({ root: document.location.pathname });
+    
+    ok( callback.calledOnce, 'First route triggered.');
+    
+    router.navigate('route1', { trigger: true });
+    ok( callback.calledTwice, 'Second route triggered.');
+    
+    router.navigate('route2', { trigger: true });
+    equal( callback.callCount, 3, 'Third route triggered.');
+    
+    router.navigate('noRouteForThis', { trigger: true });
+    equal( callback.callCount, 4, '404 route triggered.');
+    ok( callback.calledWith('noRouteForThis'), 'The 404 handler was fired with the right arguments.');
+    
+    start();
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

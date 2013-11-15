@@ -7,6 +7,40 @@
  
  
  ~function(){
+     
+    Backbone.HistoryWith404 = (function(){
+       
+       var routers = [];
+       
+       HistoryWith404 = Backbone.History.extend({
+ 
+            loadUrl: (function(loadUrl){
+                return function(){
+                    var match = loadUrl.apply(this, arguments),
+                        fragment = this.fragment;
+                    if ( !match ){
+                        _.chain(routers).compact().all(function(router){
+                            router && router.trigger('statusCode:404', fragment);
+                        });
+                    }
+                    return match;
+                }
+            })( Backbone.History.prototype.loadUrl )
+            
+        });
+       
+       Backbone.RouterWith404 = Backbone.Router.extend({
+           constructor: (function(superConstructor){
+                return function(){
+                    superConstructor.apply(this, arguments);
+                    routers.push(this);
+                };
+           })(Backbone.Router)
+        });
+        
+        return HistoryWith404;
+        
+    })();
     
     Backbone.Cacheable = Backbone.Cacheable || {};
     
@@ -14,31 +48,30 @@
         return function(options){
             
             var _this = this, 
-                options = options || {};
+                options = options || {},
+                callback;
                 
             if ( !this.cache ){
                 this.cache = fetch.call( this, {
                     success: function(){
                         _this.cache.outcome = 'success',
-                        _this.cache.callbackArgs = _.toArray(arguments);
+                        _this.cache.callbackArgs = arguments;
                         if (options.success) options.success.apply(window, arguments);
                     },
                     error: function(){
                         _this.cache.outcome = 'error',
-                        _this.cache.callbackArgs = _.toArray(arguments);
+                        _this.cache.callbackArgs = arguments;
                         if (options.error) options.error.apply(window, arguments);
                     }
                 });
-                return this.cache;
             }
             
             else{
-                var callback = options[ this.cache.outcome ];
-                var args = this.cache.callbackArgs;
-                if ( callback ) callback.apply(window, args);
-                return this.cache;
+                callback = options[ this.cache.outcome ];
+                if ( callback ) callback.apply(window, this.cache.callbackArgs);
             }
             
+            return this.cache;
         };
     };
     
