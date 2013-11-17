@@ -16,8 +16,8 @@
  
             loadUrl: (function(loadUrl){
                 return function(){
-                    var match = loadUrl.apply(this, arguments),
-                        fragment = this.fragment;
+                    var match = loadUrl.apply(this, arguments);
+                    var fragment = this.fragment;
                     if ( !match ){
                         _.chain(routers).compact().all(function(router){
                             router && router.trigger('statusCode:404', fragment);
@@ -47,9 +47,9 @@
     Backbone.Cacheable.cachedFetch = function(fetch){
         return function(options){
             
-            var _this = this, 
-                options = options || {},
-                callback;
+            var _this = this;
+            var callback;
+            options = options || {};
                 
             if ( !this.cache ){
                 this.cache = fetch.call( this, {
@@ -75,14 +75,21 @@
         };
     };
     
+    function hardFetch(){
+        delete this.cache;
+        return this.fetch();
+    }
+    
     _.extend( Backbone.Cacheable, {
         
         Collection: Backbone.Collection.extend({
-            fetch: Backbone.Cacheable.cachedFetch( Backbone.Collection.prototype.fetch )
+            fetch: Backbone.Cacheable.cachedFetch( Backbone.Collection.prototype.fetch ),
+            hardFetch: hardFetch
         }),
         
         Model: Backbone.Model.extend({
-            fetch: Backbone.Cacheable.cachedFetch( Backbone.Model.prototype.fetch )
+            fetch: Backbone.Cacheable.cachedFetch( Backbone.Model.prototype.fetch ),
+            hardFetch: hardFetch
         })
         
     });
